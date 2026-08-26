@@ -10663,6 +10663,13 @@ struct MetricsTests {
                 && FanControlPolicy.coolingTargetRPM(minimum: 5_800, maximum: 5_800,
                                                      level: 100) == nil,
                "manual targets map the full percentage scale into reported hardware bounds")
+        expect(FanControlPolicy.targetRPMMatches(target: 3_121, expected: 3_121)
+                && FanControlPolicy.targetRPMMatches(target: 3_122, expected: 3_121)
+                && FanControlPolicy.targetRPMMatches(target: 1_201.5, expected: 1_200)
+                && !FanControlPolicy.targetRPMMatches(target: 3_500, expected: 3_121)
+                && !FanControlPolicy.targetRPMMatches(target: 1_205, expected: 1_200)
+                && !FanControlPolicy.targetRPMMatches(target: .nan, expected: 1_200),
+               "fan target verification allows a narrow tolerance and rejects stale or malformed targets")
 
         let defaultCurve = FanControlConfiguration.defaultCurve
         expect(FanControlPolicy.validConfiguration(.manual(level: 0))
