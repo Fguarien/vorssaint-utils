@@ -10,6 +10,7 @@ enum CPUTemperaturePlatform: Equatable {
     case appleM3Family
     case appleM4Family
     case appleM5Family
+    case intel
     case generic
 }
 
@@ -63,7 +64,12 @@ enum TemperatureSensorSelector {
         case 3: return .appleM3Family
         case 4: return .appleM4Family
         case 5: return .appleM5Family
-        default: return .generic
+        default:
+            // Intel Macs name their CPU in the same sysctl. They expose a
+            // completely different SMC namespace (TC…/TG… instead of Tp…/Tg…),
+            // so they need their own platform rather than the generic fallback,
+            // which finds no CPU sensor at all on them.
+            return brand.contains("Intel") ? .intel : .generic
         }
     }
 
@@ -95,6 +101,7 @@ enum TemperatureSensorSelector {
         switch platform {
         case .appleM1Family, .appleM2Family, .appleM3Family, .appleM4Family, .appleM5Family:
             return true
+        case .intel: return true
         case .generic: return false
         }
     }
@@ -111,15 +118,40 @@ enum TemperatureSensorSelector {
             return appleM4CPUCoreKeys.contains(key)
         case .appleM5Family:
             return appleM5CPUCoreKeys.contains(key)
+        case .intel:
+            return isIntelCPUCoreKey(key)
         case .generic:
             return false
         }
     }
 
+    /// Intel die sensors, the ones that actually track the cores: TC0c…TC9c per
+    /// core, TCXc/TCXC for the package (PECI), TC0D/TCXD for the die on the
+    /// notebooks. Deliberately excludes TC0P and TC0H — proximity and heatsink
+    /// sensors that lag the die by ten degrees or more.
+    static func isIntelCPUCoreKey(_ key: String) -> Bool {
+        let characters = Array(key)
+        guard characters.count == 4, characters[0] == "T", characters[1] == "C" else { return false }
+        guard characters[2].isNumber || characters[2] == "X" else { return false }
+        return characters[3] == "c" || characters[3] == "C"
+            || characters[3] == "d" || characters[3] == "D"
+    }
+
     static func isCPUTemperatureKey(_ key: String,
                                     platform: CPUTemperaturePlatform) -> Bool {
+        // Intel keeps its CPU sensors under TC…; Tp/Te on those machines are
+        // power-supply and enclosure probes, so matching them there would
+        // display a case temperature as the CPU temperature.
+        if platform == .intel { return key.hasPrefix("TC") }
         if key.hasPrefix("Tp") || key.hasPrefix("Te") { return true }
         return platform == .appleM3Family && key.hasPrefix("Tf")
+    }
+
+    /// GPU sensors: Tg… on Apple Silicon, TG… on Intel (one block per discrete
+    /// GPU, so a dual-GPU Mac Pro reports both).
+    static func isGPUTemperatureKey(_ key: String,
+                                    platform: CPUTemperaturePlatform) -> Bool {
+        platform == .intel ? key.hasPrefix("TG") : key.hasPrefix("Tg")
     }
 
     static func stabilizedTemperature(_ reading: Double?,

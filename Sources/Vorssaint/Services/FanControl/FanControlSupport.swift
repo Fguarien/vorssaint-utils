@@ -392,6 +392,21 @@ enum SMCValueCodec {
                 raw |= UInt64(byte) << UInt64(offset * 8)
             }
             return Double(raw) / 65_536.0
+        case let fixedPoint where bytes.count == 2
+            && (fixedPoint.hasPrefix("sp") || fixedPoint.hasPrefix("fp")):
+            // Generic "sp"/"fp" fixed point: the last character is the number of
+            // fractional bits in hex ("spa5" -> 5, "sp87" -> 7). Apple Silicon
+            // only ships sp78 and fpe2, both handled above, but Intel SMCs
+            // publish their power and current sensors (PSTR, PCPC, PC0C…) in the
+            // rest of the family — without this they decode to nothing and the
+            // app reports "no power metrics" on every Intel Mac.
+            guard let fractionBits = Int(String(fixedPoint.suffix(1)), radix: 16),
+                  fractionBits <= 15 else { return nil }
+            let raw = UInt16(bytes[0]) << 8 | UInt16(bytes[1])
+            let magnitude = fixedPoint.hasPrefix("sp")
+                ? Double(Int16(bitPattern: raw))
+                : Double(raw)
+            return magnitude / Double(1 << fractionBits)
         default:
             return nil
         }

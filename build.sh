@@ -39,7 +39,11 @@ else
     BUILD_CONFIGURATION="release"
 fi
 FAN_HELPER_ID="$APP_BUNDLE_ID.fan-control"
-TARGET="arm64-apple-macosx14.0"
+# Architecture. Upstream hardcoded arm64; build for the host instead so the
+# same script yields a native binary on an Intel Mac too. Override with
+# VORSSAINT_ARCH=arm64|x86_64.
+ARCH="${VORSSAINT_ARCH:-$(/usr/bin/uname -m)}"
+TARGET="$ARCH-apple-macosx14.0"
 ENTITLEMENTS="Resources/Vorssaint.entitlements"
 LEGACY_IDENTITY="Vorssaint Utils Signing"
 
