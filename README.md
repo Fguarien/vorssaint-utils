@@ -26,7 +26,7 @@
   <a href="https://github.com/vorssaintapp/vorssaint-utils/releases"><img src="https://img.shields.io/github/v/release/vorssaintapp/vorssaint-utils?label=release&color=4c8dff" alt="Latest release"></a>
   <a href="https://github.com/vorssaintapp/vorssaint-utils/releases"><img src="https://img.shields.io/github/downloads/vorssaintapp/vorssaint-utils/total?color=4c8dff" alt="Downloads"></a>
   <a href="https://github.com/vorssaintapp/vorssaint-utils/actions/workflows/ci.yml"><img src="https://github.com/vorssaintapp/vorssaint-utils/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI status"></a>
-  <a href="#what-you-need"><img src="https://img.shields.io/badge/macOS-14%2B%20Apple%20Silicon-black" alt="macOS 14 and newer, Apple Silicon"></a>
+  <a href="#what-you-need"><img src="https://img.shields.io/badge/macOS-14%2B%20Apple%20Silicon%20%7C%20Intel-black" alt="macOS 14 and newer, Apple Silicon or Intel"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License GPL 3.0 or later"></a>
 </p>
 
@@ -203,25 +203,8 @@ The shelf and almost every quick toggle need no permission at all. Finder cut an
 
 ## What you need
 
-- A Mac with Apple Silicon, or an Intel Mac (this fork — see below)
+- A Mac with Apple Silicon or Intel
 - macOS 14 Sonoma or newer
-
-### Intel support (this fork)
-
-Upstream builds for `arm64` only. This fork builds and runs natively on Intel:
-
-- `build.sh` targets the host architecture (`VORSSAINT_ARCH=arm64|x86_64` to override)
-  instead of hardcoding `arm64`.
-- The SMC value decoder handles the whole generic `sp…`/`fp…` fixed-point family.
-  Intel Macs publish their power sensors as `spa5`, which decoded to nothing before —
-  which is why every Intel Mac reported "no power metrics".
-- Temperature sensors: Intel uses a different SMC namespace (`TC…` for the CPU,
-  `TG…` for the GPU) than Apple Silicon (`Tp…`/`Te…`/`Tg…`). The selector now knows
-  both, and prefers the Intel die sensors (`TC0c…TC9c`, `TCXc`) over the proximity
-  ones, which lag the die by ten degrees or more.
-- One unit test asserted that 64 blocked threads starve the libdispatch pool. They
-  do on Apple Silicon; an Intel Mac keeps handing out workers past that, so the test
-  now blocks in batches until the pool really is starved.
 
 ### Build it yourself
 
